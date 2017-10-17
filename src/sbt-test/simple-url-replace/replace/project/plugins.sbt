@@ -1,3 +1,5 @@
-resolvers += Classpaths.sbtPluginSnapshots
-
-addSbtPlugin("org.neolin.sbt" % "sbt-simple-url-update" % sys.props("project.version"))
+sys.props.get("plugin.version") match {
+   case Some(x) => addSbtPlugin("com.github.gpgekko" % "sbt-simple-url-update" % x)
+   case _ => sys.error("""|The system property 'plugin.version' is not defined.
+                          |Specify this property using the scriptedLaunchOpts -D.""".stripMargin)
+}

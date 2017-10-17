@@ -1,3 +1,9 @@
+import com.typesafe.sbt.web.SbtWeb
+import com.typesafe.sbt.web.SbtWeb.autoImport.WebJs._
+import com.typesafe.sbt.web.SbtWeb.autoImport._
+import sbt.Keys._
+import sbt._
+
 lazy val root = (project in file(".")).enablePlugins(SbtWeb)
 
 pipelineStages := Seq(simpleUrlUpdate)
@@ -13,4 +19,3 @@ checkUpdatedContents := {
   val contents = (mappings.filterNot(x => x._1.isDirectory).filter(x => x._2.endsWith("css") || x._2.endsWith("js") ).map(x =>IO.read(x._1))).toSet
   if (contents != expectedContents) sys.error(s"Expected $expectedContents but contents are $contents")
 }
-

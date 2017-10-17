@@ -1,29 +1,34 @@
-import bintray.Keys._
+import sbt.URL
 
 sbtPlugin := true
 
-organization := "org.neolin.sbt"
 
+// Basic application information.
+// ---------------------------------------
+organization := "com.github.gpgekko"
+organizationName := "gpgekko"
+organizationHomepage := Some(new URL("https://github.com/gpgekko"))
 name := "sbt-simple-url-update"
+homepage := Some(new URL("https://github.com/gpgekko/sbt-simple-url-update"))
+startYear := Some(2017)
 
-version := "1.0.1"
 
-scalaVersion := "2.10.4"
+// Scala version to use.
+// ---------------------------------------
+crossSbtVersions := Seq("0.13.16", "1.0.2")
 
-resolvers += Classpaths.sbtPluginSnapshots
 
-bintrayPublishSettings
+// Plugins.
+// ---------------------------------------
+addSbtPlugin("com.typesafe.sbt" % "sbt-web" % "1.4.3")
 
-repository in bintray := "sbt-plugins"
 
-bintrayOrganization in bintray := None
+// Scripted.
+// ---------------------------------------
+scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}")
+scriptedBufferLog := false
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-web" % "1.0.0")
+
+publishMavenStyle := false
 
 licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
-
-publishMavenStyle := false 
-
-scriptedSettings
-
-scriptedLaunchOpts += ("-Dproject.version=" + version.value)
