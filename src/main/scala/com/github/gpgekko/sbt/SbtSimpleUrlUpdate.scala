@@ -1,13 +1,12 @@
 package com.github.gpgekko.sbt
 
 import com.typesafe.sbt.web.Compat
-import sbt._
-import com.typesafe.sbt.web.{PathMapping, SbtWeb}
+import com.typesafe.sbt.web.PathMapping
+import com.typesafe.sbt.web.SbtWeb
 import com.typesafe.sbt.web.pipeline.Pipeline
 import sbt.Keys._
 import sbt.Task
-import Sbt10Compat.SbtIoPath._
-import com.typesafe.sbt.web.PathMapping
+import sbt._
 
 object Import {
    val simpleUrlUpdate: TaskKey[Pipeline.Stage] = taskKey[Pipeline.Stage]("Update assets url in static css or js files with in asset pipeline.")
@@ -29,13 +28,14 @@ object SbtSimpleUrlUpdate extends AutoPlugin {
 
    override def projectSettings: Seq[Setting[_]] = Seq(
       simpleUrlUpdateAlgorithms in simpleUrlUpdate := Seq("md5"),
-      includeFilter in simpleUrlUpdate := "*.css" || "*.js" ,
+      includeFilter in simpleUrlUpdate := "*.css" || "*.js",
       excludeFilter in simpleUrlUpdate := HiddenFileFilter,
+      resourceManaged in simpleUrlUpdate := webTarget.value / simpleUrlUpdate.key.label,
       simpleUrlUpdate := simpleURLUpdateFiles.value
    )
 
    private def updatePipeline(mappings: Seq[PathMapping], algorithm: String): String => String = {
-      val reversePathMappings = mappings.map{ case (k, v) => (v, k) }.toMap
+      val reversePathMappings = mappings.map { case (k, v) => (v, k) }.toMap
 
       def checksummedPath(path: String): String = {
          val pathFile = sbt.file(path)
@@ -44,14 +44,14 @@ object SbtSimpleUrlUpdate extends AutoPlugin {
             case None => path
          }
       }
-      val assetVersions = mappings.map{
-         case (file, path) => path.replaceAll("\\\\","/") -> checksummedPath(path).replaceAll("\\\\","/")
-      }.distinct.filterNot{
+      val assetVersions = mappings.map {
+         case (_, path) => path.replaceAll("\\\\","/") -> checksummedPath(path).replaceAll("\\\\","/")
+      }.distinct.filterNot {
          case (originalPath, newPath) => originalPath == newPath
       }
 
       Function.chain(
-         assetVersions.map{
+         assetVersions.map {
             case (originalPath, newPath) => (content: String) => content.replaceAll(originalPath, newPath)
          }
       )
@@ -62,27 +62,25 @@ object SbtSimpleUrlUpdate extends AutoPlugin {
       val excludeFilterValue = (excludeFilter in simpleUrlUpdate).value
       val includeFilterValue = (includeFilter in simpleUrlUpdate).value
       val streamsValue = streams.value
-      val webTargetValue = webTarget.value
       val label = simpleUrlUpdate.key.label
+      val targetDir = (resourceManaged in simpleUrlUpdate).value
 
       mappings =>
-         val targetDir = webTargetValue / label
+         val updateMappings = mappings.filter(f => !f._1.isDirectory && includeFilterValue.accept(f._1) && !excludeFilterValue.accept(f._1))
 
          SbtWeb.syncMappings(
             Compat.cacheStore(streamsValue, label),
-            mappings,
+            updateMappings,
             targetDir
          )
 
-         val updateMappings = Sbt10Compat.allPaths(targetDir).get.toSet.filter(_.isFile).pair(relativeTo(targetDir))
-
          for {
             algorithm <- algorithmsValue
-            (file, path) <- updateMappings.filter(f => !f._1.isDirectory && includeFilterValue.accept(f._1) && !excludeFilterValue.accept(f._1))
+            (file, _) <- updateMappings
          } yield {
-            IO.write(file, updatePipeline(updateMappings, algorithm)(IO.read(file)))
+            IO.write(file, updatePipeline(mappings, algorithm)(IO.read(file)))
          }
 
-         Sbt10Compat.allPaths(targetDir).get.toSet.filter(_.isFile).pair(relativeTo(targetDir))
+         mappings
    }
 }
